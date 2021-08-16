@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -62,13 +63,21 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "bad request body\n")
 		return
-	} else if data.Key == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "key must not be empty\n")
+	}
+
+	// if key is not set, generate md5 hash
+	if data.Key == "" {
+		hash := md5.New()
+		key := fmt.Sprintf("%x", hash.Sum([]byte(data.URL)))
+		s.m[key] = data.URL
+
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintf(w, "register successed!\nkey: %s, URL: %s\n", key, data.URL)
 		return
 	}
 
-	if s.m[data.Key] != "" {
+	// if key has already been used, its request is bad request
+	if _, ok := s.m[data.Key]; !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "URL has already been registered\n")
 		return
