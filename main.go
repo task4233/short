@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 type Server struct {
@@ -20,12 +23,13 @@ func (s *Server) init() {
 	s.m = make(map[string]string)
 	s.m["test"] = "https://example.com"
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
-	mux.HandleFunc("/urls", s.URLs)
-	mux.HandleFunc("/register", s.Register)
-	mux.HandleFunc("/", s.Index)
-	s.handler = mux
+	r.Get("/urls", s.URLs)
+	r.Post("/register", s.Register)
+	r.Get("/", s.Index)
+	s.handler = r
 }
 
 // Data stores mapping data for redirect
@@ -40,7 +44,7 @@ func (s *Server) Index(w http.ResponseWriter, r *http.Request) {
 	u, ok := s.m[r.URL.Path[1:]]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "not found")
+		fmt.Fprintf(w, "not found\n")
 		return
 	}
 	http.Redirect(w, r, u, http.StatusMovedPermanently)
